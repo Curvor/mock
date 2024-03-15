@@ -170,9 +170,10 @@ MOCK_EXPORT t_sequence* object_getoutput(void *o, int outletnum) {
 }
 
 
-MOCK_EXPORT t_sequence object_getoutput_and_clear(void *o, int outletnum) {
-    t_mock_outlet& outlet = object_getoutlet(o, outletnum);
-    return outlet.get_messages_and_clear();
+MOCK_EXPORT void object_getoutput_and_clear(void *o, int outletnum, t_sequence* dest) {
+    t_mock_outlet& outlet = object_getoutlet(o, outletnum);    
+    auto messages = outlet.get_messages_and_clear();
+    *dest = messages;
 }
 
 /**	Create a new outlet.
