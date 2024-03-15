@@ -6,6 +6,9 @@
 #pragma once
 
 #include "c74_mock_atoms.h"
+#include <mutex>
+
+static std::mutex mutex;
 
 namespace c74 {
 namespace max {
@@ -58,6 +61,22 @@ public:
         return m_messages;
     }
 
+    // make a copy of current messages and then clear existing message log
+    t_sequence get_messages_and_clear()
+    {
+        t_sequence new_messages;
+        {
+            std::unique_lock lock(mutex);
+            for(auto message : m_messages)
+            {
+                t_atom_vector new_message(message);
+                new_messages.push_back(new_message);
+            }
+            m_messages.clear();
+        }
+        
+        return new_messages;
+    }
 
     /**	Push a new message to the outlet. */
     void push(t_atom_long value)
@@ -67,6 +86,8 @@ public:
         av.resize(2);
         atom_setsym(&av[0], gensym("int"));
         atom_setlong(&av[1], value);
+        
+        std::unique_lock lock(mutex);
         m_messages.push_back(av);
     }
 
@@ -78,6 +99,8 @@ public:
         av.resize(2);
         atom_setsym(&av[0], gensym("float"));
         atom_setfloat(&av[1], value);
+        
+        std::unique_lock lock(mutex);
         m_messages.push_back(av);
     }
 
@@ -97,6 +120,8 @@ public:
             for (long i=0; i<argc; i++)
                 av[i+1] = argv[i];
         }
+        
+        std::unique_lock lock(mutex);
         m_messages.push_back(av);
     }
 };
@@ -144,6 +169,11 @@ MOCK_EXPORT t_sequence* object_getoutput(void *o, int outletnum) {
     return &outlet.get_messages();
 }
 
+
+MOCK_EXPORT t_sequence object_getoutput_and_clear(void *o, int outletnum) {
+    t_mock_outlet& outlet = object_getoutlet(o, outletnum);
+    return outlet.get_messages_and_clear();
+}
 
 /**	Create a new outlet.
     This mocks the behavior of Max's real outlet_new().
